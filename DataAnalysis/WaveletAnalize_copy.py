@@ -49,8 +49,9 @@ for file in os.listdir(original_path):
 
     line2 = []
     line3 = [] # hh recovery value
-    line4 = [] # l recovery value
+    line4 = [] # h recovery value
     line5 = [] # final level hh value, size is not original
+    line6 = [] # l recovery value
     for i in range(0,5):
         input = imgs[i].unsqueeze(0) # torch.tensor(1, C, 256, 256)
 
@@ -82,13 +83,23 @@ for file in os.listdir(original_path):
         # line3.append(m_input)
         line5.append(f_inputhOriginal)
 
-        # original-l remains, other zero
+        # level-h remains, other zero
+        m_inputlnew = torch.zeros_like(f_inputl)
+        m_inputhnew = []
+        for t in range(0, level):
+            m_inputhnew.append(torch.zeros_like(f_inputh[t]))
+        m_inputhnew[level-1] = f_inputh[level-1]
+        m_input = idwt((m_inputlnew, m_inputhnew)) # idwt for hh, [B, C, H, W]
+        line4.append(norm(m_input))
+        # line3.append(m_input)
+
+        # level-l remains, other zero
         l_inputlnew = f_inputl
         l_inputhnew = []
         for t in range(0, level):
             l_inputhnew.append(torch.zeros_like(f_inputh[t]))
         l_input = idwt((l_inputlnew, l_inputhnew))
-        line4.append(norm(l_input))
+        line6.append(norm(l_input))
 
 
     sub2 = torch.mean(line5[0]-line5[1]-line5[2]-line5[3])
@@ -96,7 +107,8 @@ for file in os.listdir(original_path):
     con = torch.cat(line2, dim = 3).squeeze(0)
     con2 = torch.cat(line3, dim= 3).squeeze(0)
     con3 = torch.cat(line4, dim = 3).squeeze(0)
-    result = torch.cat([original, con, con2, con3], dim=1)
+    con4 = torch.cat(line6, dim = 3).squeeze(0)
+    result = torch.cat([original, con, con2, con3, con4], dim=1)
     # result = torch.cat([original, con, con2], dim=1)
     result = result.repeat(3,1,1)    
     result = result.numpy().transpose(1, 2, 0).astype(np.uint8)
